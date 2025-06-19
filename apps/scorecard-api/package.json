@@ -71,6 +71,7 @@
     }
   },
   "dependencies": {
+    "auto-parse": "^2.4.0",
     "axios": "^1.6.0"
   }
 }
