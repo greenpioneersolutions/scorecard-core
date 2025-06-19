@@ -4,6 +4,19 @@ Scorecard Core provides utilities to gather metrics from GitHub, combine them wi
 external API data and calculate an overall score for a repository. It is a small
 collection of Node modules built with Nx.
 
+## Architecture
+
+This repository contains three main packages:
+
+* **@scorecard/scorecard-git** – collects pull request data from GitHub.
+* **@scorecard/scorecard-engine** – implements the normalization and scoring logic.
+* **@scorecard/scorecard-core** – orchestrates data collection and uses the engine
+  to produce final scores.
+
+With this layout the Git package focuses solely on gathering raw metrics while all
+scoring and normalization logic lives in the engine. The core package ties the two
+together to generate scorecards.
+
 ## Example usage
 
 A complete example can be found in [examples/basic.ts](examples/basic.ts). After
