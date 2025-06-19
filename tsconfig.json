@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/scorecard-core-e2e"
+    },
+    {
+      "path": "./apps/scorecard-core"
+    },
+    {
+      "path": "./apps/scorecard-git-e2e"
+    },
+    {
+      "path": "./apps/scorecard-git"
+    },
+    {
+      "path": "./apps/scorecard-api-e2e"
+    },
+    {
+      "path": "./apps/scorecard-api"
+    },
+    {
+      "path": "./apps/scorecard-engine-e2e"
+    },
+    {
+      "path": "./apps/scorecard-engine"
+    }
+  ]
+}

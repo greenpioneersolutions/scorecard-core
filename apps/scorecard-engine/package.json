@@ -1,0 +1,71 @@
+{
+  "name": "@scorecard/scorecard-engine",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "targets": {
+      "build": {
+        "executor": "@nx/esbuild:esbuild",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "defaultConfiguration": "production",
+        "options": {
+          "platform": "node",
+          "outputPath": "apps/scorecard-engine/dist",
+          "format": [
+            "cjs"
+          ],
+          "bundle": false,
+          "main": "apps/scorecard-engine/src/main.ts",
+          "tsConfig": "apps/scorecard-engine/tsconfig.app.json",
+          "assets": [
+            "apps/scorecard-engine/src/assets"
+          ],
+          "esbuildOptions": {
+            "sourcemap": true,
+            "outExtension": {
+              ".js": ".js"
+            }
+          }
+        },
+        "configurations": {
+          "development": {},
+          "production": {
+            "esbuildOptions": {
+              "sourcemap": false,
+              "outExtension": {
+                ".js": ".js"
+              }
+            }
+          }
+        }
+      },
+      "serve": {
+        "continuous": true,
+        "executor": "@nx/js:node",
+        "defaultConfiguration": "development",
+        "dependsOn": [
+          "build"
+        ],
+        "options": {
+          "buildTarget": "@scorecard/scorecard-engine:build",
+          "runBuildTargetDependencies": false
+        },
+        "configurations": {
+          "development": {
+            "buildTarget": "@scorecard/scorecard-engine:build:development"
+          },
+          "production": {
+            "buildTarget": "@scorecard/scorecard-engine:build:production"
+          }
+        }
+      },
+      "test": {
+        "options": {
+          "passWithNoTests": true
+        }
+      }
+    }
+  }
+}
