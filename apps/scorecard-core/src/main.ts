@@ -33,12 +33,21 @@ export async function createScorecard(
   } = options;
 
   const [gitMetrics, apiMetrics] = await Promise.all([
-    getGitMetrics(repo, token).catch(() => ({} as Record<string, number>)),
+    getGitMetrics(repo, token).catch(() => ({} as any)),
     fetchApiData(apiUrl, apiParams).catch(() => ({} as Record<string, number>)),
   ]);
 
+  const numericGitMetrics: Record<string, number> = {};
+  for (const [key, value] of Object.entries(
+    gitMetrics as Record<string, any>
+  )) {
+    if (typeof value === 'number') {
+      numericGitMetrics[key] = value;
+    }
+  }
+
   const metrics: Record<string, number> = {
-    ...gitMetrics,
+    ...numericGitMetrics,
     ...apiMetrics,
     ...staticMetrics,
   };
