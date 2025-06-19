@@ -1,4 +1,12 @@
 import { createScorecard } from '@scorecard/scorecard-core';
+import { fetchApiData } from '@scorecard/scorecard-api';
+import { normalizeData, calculateScore } from '@scorecard/scorecard-engine';
+import {
+  collectPullRequests,
+  calculateMetrics,
+  calculateCycleTime,
+  calculateReviewMetrics,
+} from '@scorecard/scorecard-git';
 
 async function run() {
   const ranges = {
@@ -17,9 +25,22 @@ async function run() {
 
   const result = await createScorecard({
     repo: 'octocat/Hello-World',
-    apiUrl: 'https://example.com/mock',
+    apis: [
+      { url: 'https://example.com/mock' },
+      { url: 'https://example.com/other', options: { params: { q: 'demo' } } },
+    ],
     ranges,
     weights,
+    deps: {
+      fetchApiData,
+      engine: { normalizeData, calculateScore },
+      git: {
+        collectPullRequests,
+        calculateMetrics,
+        calculateCycleTime,
+        calculateReviewMetrics,
+      },
+    },
   });
 
   console.log(JSON.stringify(result, null, 2));
