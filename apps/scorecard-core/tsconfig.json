@@ -8,6 +8,15 @@
     },
     {
       "path": "./tsconfig.spec.json"
+    },
+    {
+      "path": "../scorecard-git"
+    },
+    {
+      "path": "../scorecard-api"
+    },
+    {
+      "path": "../scorecard-engine"
     }
   ]
 }
