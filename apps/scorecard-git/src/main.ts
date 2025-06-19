@@ -53,9 +53,9 @@ export async function getGitMetrics(
   let mergedCount = 0;
   let closedWithoutMerge = 0;
   let totalCommits = 0;
-  let outsizedPrs: number[] = [];
-  let cycleTimes: number[] = [];
-  let pickupTimes: number[] = [];
+  const outsizedPrs: number[] = [];
+  const cycleTimes: number[] = [];
+  const pickupTimes: number[] = [];
   let reviewsWithComments = 0;
   let prBacklog = 0;
   let stalePrCount = 0;
