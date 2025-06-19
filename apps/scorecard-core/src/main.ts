@@ -1,4 +1,9 @@
-import { getGitMetrics } from '@scorecard/scorecard-git';
+import {
+  collectPullRequests,
+  calculateMetrics,
+  calculateCycleTime,
+  calculateReviewMetrics,
+} from '@scorecard/scorecard-git';
 import { fetchApiData } from '@scorecard/scorecard-api';
 import { normalizeData, calculateScore } from '@scorecard/scorecard-engine';
 
@@ -32,10 +37,41 @@ export async function createScorecard(
     token,
   } = options;
 
-  const [gitMetrics, apiMetrics] = await Promise.all([
-    getGitMetrics(repo, token).catch(() => ({} as any)),
-    fetchApiData(apiUrl, apiParams).catch(() => ({} as Record<string, number>)),
-  ]);
+  const [owner, repoName] = repo.split('/');
+
+  const prs = await collectPullRequests({
+    owner,
+    repo: repoName,
+    since: new Date(0).toISOString(),
+    auth: token ?? '',
+  }).catch(() => [] as any[]);
+
+  const gitMetricsData = calculateMetrics(prs as any);
+
+  const cycleTimes: number[] = [];
+  const pickupTimes: number[] = [];
+  for (const pr of prs as any[]) {
+    try {
+      cycleTimes.push(calculateCycleTime(pr as any));
+    } catch {}
+    try {
+      pickupTimes.push(calculateReviewMetrics(pr as any));
+    } catch {}
+  }
+  const cycleTime =
+    cycleTimes.reduce((a, b) => a + b, 0) / (cycleTimes.length || 1);
+  const pickupTime =
+    pickupTimes.reduce((a, b) => a + b, 0) / (pickupTimes.length || 1);
+
+  const gitMetrics: Record<string, number> = {
+    cycleTime,
+    pickupTime,
+    ...gitMetricsData,
+  } as any;
+
+  const apiMetrics = await fetchApiData(apiUrl, apiParams).catch(
+    () => ({} as Record<string, number>),
+  );
 
   const numericGitMetrics: Record<string, number> = {};
   for (const [key, value] of Object.entries(
