@@ -44,19 +44,23 @@ export async function createScorecard(
     repo: repoName,
     since: new Date(0).toISOString(),
     auth: token ?? '',
-  }).catch(() => [] as any[]);
+  }).catch(() => [] as unknown[]);
 
   const gitMetricsData = calculateMetrics(prs as any);
 
   const cycleTimes: number[] = [];
   const pickupTimes: number[] = [];
-  for (const pr of prs as any[]) {
+  for (const pr of prs as unknown[]) {
     try {
       cycleTimes.push(calculateCycleTime(pr as any));
-    } catch {}
+    } catch {
+      cycleTimes.push(0);
+    }
     try {
       pickupTimes.push(calculateReviewMetrics(pr as any));
-    } catch {}
+    } catch {
+      pickupTimes.push(0);
+    }
   }
   const cycleTime =
     cycleTimes.reduce((a, b) => a + b, 0) / (cycleTimes.length || 1);
