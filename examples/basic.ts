@@ -24,7 +24,10 @@ async function run() {
   };
 
   const result = await createScorecard({
-    repo: 'octocat/Hello-World',
+    repos: [
+      { repo: 'octocat/Hello-World' },
+      { repo: 'octocat/Spoon-Knife', token: 'MY_TOKEN', since: '2024-01-01' },
+    ],
     apis: [
       { url: 'https://example.com/mock' },
       { url: 'https://example.com/other', options: { params: { q: 'demo' } } },

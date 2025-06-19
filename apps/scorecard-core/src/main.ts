@@ -30,6 +30,15 @@ export interface EngineFunctions {
   calculateScore: typeof defaultCalculateScore;
 }
 
+export interface RepoSpec {
+  repo: string;
+  token?: string;
+  since?: string;
+  baseUrl?: string;
+  includeLabels?: string[];
+  excludeLabels?: string[];
+}
+
 export interface ScorecardDependencies {
   fetchApiData?: typeof defaultFetchApiData;
   git?: GitFunctions;
@@ -37,6 +46,8 @@ export interface ScorecardDependencies {
 }
 
 export interface ScorecardOptions {
+  repos?: RepoSpec[];
+  /** @deprecated use `repos` */
   repo?: string;
   apis?: ApiSpec[];
   /** @deprecated use `apis` */
@@ -46,6 +57,7 @@ export interface ScorecardOptions {
   staticMetrics?: Record<string, number>;
   ranges: Record<string, { min: number; max: number }>;
   weights: Record<string, number>;
+  /** @deprecated use RepoSpec.token */
   token?: string;
   deps?: ScorecardDependencies;
 }
@@ -58,9 +70,10 @@ export interface ScorecardResult {
 }
 
 export async function createScorecard(
-  options: ScorecardOptions
+  options: ScorecardOptions,
 ): Promise<ScorecardResult> {
   const {
+    repos = [],
     repo,
     apis = [],
     apiUrl,
@@ -85,23 +98,32 @@ export async function createScorecard(
   }
 
   let gitMetrics: Record<string, number> = {};
-  if (git && repo) {
-    const [owner, repoName] = repo.split('/');
+  const repoSpecs: RepoSpec[] = [...repos];
+  if (repo) repoSpecs.push({ repo, token });
 
-    const prs = await git
-      .collectPullRequests({
-        owner,
-        repo: repoName,
-        since: new Date(0).toISOString(),
-        auth: token ?? '',
-      })
-      .catch(() => [] as unknown[]);
+  if (git && repoSpecs.length > 0) {
+    const allPrs: unknown[] = [];
+    for (const spec of repoSpecs) {
+      const [owner, repoName] = spec.repo.split('/');
+      const prs = await git
+        .collectPullRequests({
+          owner,
+          repo: repoName,
+          since: spec.since ?? new Date(0).toISOString(),
+          auth: spec.token ?? token ?? '',
+          baseUrl: spec.baseUrl,
+          includeLabels: spec.includeLabels,
+          excludeLabels: spec.excludeLabels,
+        })
+        .catch(() => [] as unknown[]);
+      allPrs.push(...prs);
+    }
 
-    const gitMetricsData = git.calculateMetrics(prs as any);
+    const gitMetricsData = git.calculateMetrics(allPrs as any);
 
     const cycleTimes: number[] = [];
     const pickupTimes: number[] = [];
-    for (const pr of prs as unknown[]) {
+    for (const pr of allPrs as unknown[]) {
       try {
         cycleTimes.push(git.calculateCycleTime(pr as any));
       } catch {
@@ -128,7 +150,7 @@ export async function createScorecard(
   const apiMetrics: Record<string, number> = {};
   for (const api of allApis) {
     const data = await fetchFn(api.url, api.options).catch(
-      () => ({} as Record<string, any>),
+      () => ({}) as Record<string, any>,
     );
     if (data && typeof data === 'object') {
       for (const [k, v] of Object.entries(data)) {
@@ -139,7 +161,7 @@ export async function createScorecard(
 
   const numericGitMetrics: Record<string, number> = {};
   for (const [key, value] of Object.entries(
-    gitMetrics as Record<string, any>
+    gitMetrics as Record<string, any>,
   )) {
     if (typeof value === 'number') {
       numericGitMetrics[key] = value;
@@ -180,7 +202,10 @@ if (require.main === module) {
       weights,
       deps: {
         fetchApiData: defaultFetchApiData,
-        engine: { normalizeData: defaultNormalizeData, calculateScore: defaultCalculateScore },
+        engine: {
+          normalizeData: defaultNormalizeData,
+          calculateScore: defaultCalculateScore,
+        },
         git: {
           collectPullRequests: defaultCollectPullRequests,
           calculateMetrics: defaultCalculateMetrics,
