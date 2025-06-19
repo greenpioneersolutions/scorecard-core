@@ -30,6 +30,9 @@ export function calculateScore(
   return { scores, overall };
 }
 
+export * from './normalize.js';
+export * from './scoring.js';
+
 if (require.main === module) {
   const norm = normalizeData({ a: 5 }, { a: { min: 0, max: 10 } });
   console.log(calculateScore(norm, { a: 1 }));
