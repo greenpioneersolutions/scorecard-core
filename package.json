@@ -17,7 +17,8 @@
     "test:watch": "nx run-many --target=test --all --watch",
     "format": "nx format:write",
     "format:check": "nx format:check",
-    "prettier": "prettier . --write"
+    "prettier": "prettier . --write",
+    "build:package": "node build.js"
   },
   "private": true,
   "devDependencies": {
