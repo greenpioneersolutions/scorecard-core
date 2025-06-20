@@ -4,6 +4,9 @@ import {
   calculateCycleTime as defaultCalculateCycleTime,
   calculateReviewMetrics as defaultCalculateReviewMetrics,
 } from '@scorecard/scorecard-git';
+import { Command } from 'commander';
+import fs from 'fs';
+import yaml from 'js-yaml';
 import {
   fetchApiData as defaultFetchApiData,
   type FetchApiOptions,
@@ -292,41 +295,42 @@ export async function createScorecard(
 
 export { createRangeNormalizer, scoreMetrics } from '@scorecard/scorecard-engine';
 
-if (require.main === module) {
-  (async () => {
-    const ranges = {
-      cycleTime: { min: 0, max: 168 }, // hours
-      pickupTime: { min: 0, max: 24 },
-      mergeRate: { min: 0, max: 1 },
-      buildSuccessRate: { min: 0, max: 1 },
-    };
+export async function runCli(argv = process.argv): Promise<void> {
+  const program = new Command();
+  program.name('scorecard').argument('<config>', 'YAML config file');
+  program.parse(argv);
 
-    const weights = {
-      cycleTime: 1,
-      pickupTime: 1,
-      mergeRate: 1,
-      buildSuccessRate: 1,
-    };
+  const [configPath] = program.args;
+  if (!configPath) {
+    program.help({ error: true });
+  }
 
-    const result = await createScorecardLegacy({
-      repo: 'octocat/Hello-World',
-      apis: [{ url: 'https://example.com/mock' }],
-      ranges,
-      weights,
-      deps: {
-        fetchApiData: defaultFetchApiData,
-        engine: {
-          normalizeData: defaultNormalizeData,
-          calculateScore: defaultCalculateScore,
-        },
-        git: {
-          collectPullRequests: defaultCollectPullRequests,
-          calculateMetrics: defaultCalculateMetrics,
-          calculateCycleTime: defaultCalculateCycleTime,
-          calculateReviewMetrics: defaultCalculateReviewMetrics,
-        },
+  const file = fs.readFileSync(configPath, 'utf8');
+  const options = (yaml.load(file) || {}) as ScorecardOptions;
+
+  const result = await createScorecardLegacy({
+    ...options,
+    deps: {
+      fetchApiData: defaultFetchApiData,
+      engine: {
+        normalizeData: defaultNormalizeData,
+        calculateScore: defaultCalculateScore,
       },
-    });
-    console.log(JSON.stringify(result, null, 2));
-  })();
+      git: {
+        collectPullRequests: defaultCollectPullRequests,
+        calculateMetrics: defaultCalculateMetrics,
+        calculateCycleTime: defaultCalculateCycleTime,
+        calculateReviewMetrics: defaultCalculateReviewMetrics,
+      },
+    },
+  });
+
+  console.log(JSON.stringify(result, null, 2));
+}
+
+if (require.main === module) {
+  runCli().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 }

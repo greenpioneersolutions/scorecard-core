@@ -30,6 +30,31 @@ npx ts-node examples/basic.ts
 The script fetches metrics for a repository and prints the calculated scorecard
 result.
 
+## Command line interface
+
+After building the project you can run the scorecard generator directly with a
+YAML configuration file:
+
+```bash
+npm run build:package
+node dist/main.js config.yml
+```
+
+An example configuration might look like:
+
+```yaml
+staticMetrics:
+  cycleTime: 10
+ranges:
+  cycleTime:
+    min: 0
+    max: 20
+weights:
+  cycleTime: 1
+```
+
+The CLI prints the resulting scorecard as JSON.
+
 ## Building for npm
 
 A helper script `build.js` is provided at the repository root. It compiles the
