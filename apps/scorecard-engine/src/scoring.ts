@@ -18,6 +18,11 @@ export interface ScoreRule<Metrics> {
   normalize?: (value: number, metrics: Metrics) => number;
 }
 
+export interface MetricScore {
+  overall: number;
+  [metric: string]: number;
+}
+
 /**
  * Calculate a weighted score from a metrics object.
  *
@@ -27,8 +32,11 @@ export interface ScoreRule<Metrics> {
 export function scoreMetrics<Metrics extends Record<string, any>>(
   metrics: Metrics,
   rules: ScoreRule<Metrics>[],
-): number {
-  let score = 0;
+): MetricScore {
+  const result: Record<string, number> = {};
+  let sum = 0;
+  let weightTotal = 0;
+  let idx = 0;
   for (const rule of rules) {
     let value =
       typeof rule.fn === "function"
@@ -38,10 +46,17 @@ export function scoreMetrics<Metrics extends Record<string, any>>(
       if (typeof rule.normalize === "function") {
         value = rule.normalize(value, metrics);
       }
-      score += value * rule.weight;
+      const scored = value * rule.weight;
+      const key =
+        typeof rule.metric === "string" ? String(rule.metric) : `rule_${idx}`;
+      idx += 1;
+      result[key] = scored;
+      sum += scored;
+      weightTotal += rule.weight;
     }
   }
-  return score;
+  result.overall = weightTotal ? sum / weightTotal : 0;
+  return result as MetricScore;
 }
 
 export default scoreMetrics;

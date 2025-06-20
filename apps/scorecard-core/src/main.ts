@@ -18,6 +18,13 @@ export interface ApiSpec {
   options?: FetchApiOptions;
 }
 
+export interface ApiInput {
+  key: string;
+  url: string;
+  options?: FetchApiOptions;
+  callback?: (data: any) => number;
+}
+
 export interface GitFunctions {
   collectPullRequests: typeof defaultCollectPullRequests;
   calculateMetrics: typeof defaultCalculateMetrics;
@@ -39,10 +46,29 @@ export interface RepoSpec {
   excludeLabels?: string[];
 }
 
+export interface GitRepoInput extends RepoSpec {
+  key: string;
+  provider?: string;
+}
+
 export interface ScorecardDependencies {
   fetchApiData?: typeof defaultFetchApiData;
   git?: GitFunctions;
   engine?: EngineFunctions;
+}
+
+export interface ScoreRuleSpec {
+  key: string;
+  weight: number;
+  description?: string;
+  score: (data: any) => number;
+}
+
+export interface ScorecardSpec {
+  name: string;
+  description?: string;
+  version?: string;
+  scores: ScoreRuleSpec[];
 }
 
 export interface ScorecardOptions {
@@ -62,6 +88,13 @@ export interface ScorecardOptions {
   deps?: ScorecardDependencies;
 }
 
+export interface ScorecardInput {
+  git?: GitRepoInput[];
+  apis?: ApiInput[];
+  scorecard: ScorecardSpec;
+  deps?: ScorecardDependencies;
+}
+
 export interface ScorecardResult {
   metrics: Record<string, number>;
   normalized: Record<string, number>;
@@ -69,7 +102,14 @@ export interface ScorecardResult {
   overall: number;
 }
 
-export async function createScorecard(
+export interface ScorecardOutput {
+  metrics: Record<string, any>;
+  scores: Record<string, number>;
+  overall: number;
+  scorecard: ScorecardSpec;
+}
+
+export async function createScorecardLegacy(
   options: ScorecardOptions,
 ): Promise<ScorecardResult> {
   const {
@@ -179,6 +219,79 @@ export async function createScorecard(
   return { metrics, normalized, scores, overall };
 }
 
+export async function createScorecard(
+  input: ScorecardInput,
+): Promise<ScorecardOutput> {
+  const { git = [], apis = [], scorecard, deps = {} } = input;
+  const fetchFn = deps.fetchApiData ?? defaultFetchApiData;
+  const gitDeps = deps.git;
+
+  const metrics: Record<string, any> = {};
+
+  if (gitDeps) {
+    for (const repo of git) {
+      const [owner, repoName] = repo.repo.split('/');
+      const prs = await gitDeps
+        .collectPullRequests({
+          owner,
+          repo: repoName,
+          since: repo.since ?? new Date(0).toISOString(),
+          auth: repo.token ?? '',
+          baseUrl: repo.baseUrl,
+          includeLabels: repo.includeLabels,
+          excludeLabels: repo.excludeLabels,
+        })
+        .catch(() => [] as unknown[]);
+      const gitMetrics = gitDeps.calculateMetrics(prs as any);
+      const cycleTimes: number[] = [];
+      const pickupTimes: number[] = [];
+      for (const pr of prs as unknown[]) {
+        try {
+          cycleTimes.push(gitDeps.calculateCycleTime(pr as any));
+        } catch {
+          cycleTimes.push(0);
+        }
+        try {
+          pickupTimes.push(gitDeps.calculateReviewMetrics(pr as any));
+        } catch {
+          pickupTimes.push(0);
+        }
+      }
+      const cycleTime =
+        cycleTimes.reduce((a, b) => a + b, 0) / (cycleTimes.length || 1);
+      const pickupTime =
+        pickupTimes.reduce((a, b) => a + b, 0) / (pickupTimes.length || 1);
+      metrics[repo.key] = {
+        cycleTime,
+        pickupTime,
+        ...gitMetrics,
+      };
+    }
+  }
+
+  for (const api of apis) {
+    const data = await fetchFn(api.url, api.options).catch(() => null);
+    metrics[api.key] =
+      typeof api.callback === 'function' ? api.callback(data) : data;
+  }
+
+  const scores: Record<string, number> = {};
+  let sum = 0;
+  let totalWeight = 0;
+  for (const rule of scorecard.scores) {
+    const value = rule.score(metrics[rule.key]);
+    const weighted = typeof value === 'number' ? value * rule.weight : 0;
+    scores[rule.key] = weighted;
+    sum += weighted;
+    totalWeight += rule.weight;
+  }
+  const overall = totalWeight ? sum / totalWeight : 0;
+
+  return { metrics, scores, overall, scorecard };
+}
+
+export { createRangeNormalizer, scoreMetrics } from '@scorecard/scorecard-engine';
+
 if (require.main === module) {
   (async () => {
     const ranges = {
@@ -195,7 +308,7 @@ if (require.main === module) {
       buildSuccessRate: 1,
     };
 
-    const result = await createScorecard({
+    const result = await createScorecardLegacy({
       repo: 'octocat/Hello-World',
       apis: [{ url: 'https://example.com/mock' }],
       ranges,
