@@ -24,7 +24,12 @@ export interface ScoreRule<Metrics> {
   normalize?: (value: number, metrics: Metrics) => number;
 }
 
+export interface MetricScore {
+  overall: number;
+  [metric: string]: number;
+}
+
 export function scoreMetrics<Metrics extends Record<string, any>>(
   metrics: Metrics,
   rules: ScoreRule<Metrics>[]
-): number;
+): MetricScore;

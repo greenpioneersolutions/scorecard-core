@@ -15,6 +15,13 @@ export interface ApiSpec {
   options?: FetchApiOptions;
 }
 
+export interface ApiInput {
+  key: string;
+  url: string;
+  options?: FetchApiOptions;
+  callback?: (data: any) => number;
+}
+
 export interface GitFunctions {
   collectPullRequests: typeof Collect;
   calculateMetrics: typeof CalcMetrics;
@@ -36,10 +43,29 @@ export interface RepoSpec {
   excludeLabels?: string[];
 }
 
+export interface GitRepoInput extends RepoSpec {
+  key: string;
+  provider?: string;
+}
+
 export interface ScorecardDependencies {
   fetchApiData?: (url: string, options?: FetchApiOptions) => Promise<any>;
   git?: GitFunctions;
   engine?: EngineFunctions;
+}
+
+export interface ScoreRuleSpec {
+  key: string;
+  weight: number;
+  description?: string;
+  score: (data: any) => number;
+}
+
+export interface ScorecardSpec {
+  name: string;
+  description?: string;
+  version?: string;
+  scores: ScoreRuleSpec[];
 }
 
 export interface ScorecardOptions {
@@ -58,12 +84,32 @@ export interface ScorecardOptions {
   token?: string;
   deps?: ScorecardDependencies;
 }
+
+export interface ScorecardInput {
+  git?: GitRepoInput[];
+  apis?: ApiInput[];
+  scorecard: ScorecardSpec;
+  deps?: ScorecardDependencies;
+}
 export interface ScorecardResult {
   metrics: Record<string, number>;
   normalized: Record<string, number>;
   scores: Record<string, number>;
   overall: number;
 }
-export function createScorecard(
+
+export interface ScorecardOutput {
+  metrics: Record<string, any>;
+  scores: Record<string, number>;
+  overall: number;
+  scorecard: ScorecardSpec;
+}
+
+export { createRangeNormalizer, scoreMetrics } from '@scorecard/scorecard-engine';
+export function createScorecardLegacy(
   options: ScorecardOptions,
 ): Promise<ScorecardResult>;
+
+export function createScorecard(
+  input: ScorecardInput,
+): Promise<ScorecardOutput>;
