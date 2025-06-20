@@ -74,6 +74,8 @@
     "@scorecard/scorecard-git": "file:../scorecard-git",
     "@scorecard/scorecard-api": "file:../scorecard-api",
     "@scorecard/scorecard-engine": "file:../scorecard-engine",
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "commander": "^11.1.0",
+    "js-yaml": "^4.1.0"
   }
 }
